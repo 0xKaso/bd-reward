@@ -28,7 +28,6 @@ contract Airdrop is Ownable {
         require(_merkleRoot != merkleRoot,"the same root node");
         epoch++;
         merkleRoot = _merkleRoot;
-        _rebalance();
     }
 
     function reclaim() public onlyOwner {
@@ -71,13 +70,5 @@ contract Airdrop is Ownable {
             "Airdrop: Transfer failed."
         );
         emit Claimed(account, amount);
-    }
-
-    function _rebalance() internal {
-        IERC20 t = IERC20(token);
-        t.transferFrom(msg.sender, address(this), t.balanceOf(msg.sender));
-
-        uint bal = t.balanceOf(address(this));
-        t.transfer(msg.sender, (bal * 3) / 10);
     }
 }
