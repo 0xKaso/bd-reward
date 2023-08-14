@@ -7,7 +7,7 @@ import "./contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "./contracts/token/ERC20/utils/SafeERC20.sol";
 import "./PBRP.sol";
 
-contract Airdrop is Ownable {
+contract Reward is Ownable {
     using SafeERC20 for IERC20Metadata;
 
     bytes32 public merkleRoot;
@@ -67,16 +67,18 @@ contract Airdrop is Ownable {
         uint ratio
     ) public {
         bytes32 node = keccak256(abi.encodePacked(account, amount));
-        require(claimed[node] != epoch, "Airdrop: Already claimed.");
+        require(claimed[node] != epoch, "Already claimed.");
         require(
             MerkleProof.verify(proof, merkleRoot, node),
-            "Airdrop: Invalid proof."
+            "Invalid proof."
         );
 
         claimed[node] = epoch;
 
         // USDT
         uint tokenAmount = (amount * ratio) / 100;
+        uint balThis = IERC20Metadata(token).balanceOf(address(this));
+        require(balThis >= tokenAmount, "Not enough token");
         if (tokenAmount > 0)
             IERC20Metadata(token).safeTransfer(account, tokenAmount);
 

@@ -7,7 +7,7 @@ const { ethers } = require("hardhat");
 const keccak256 = require("keccak256");
 const { MerkleTree } = require("merkletreejs");
 
-describe("Airdrop", function () {
+describe("Reward", function () {
   async function mockData() {
     let accounts = await ethers.getSigners();
 
@@ -34,7 +34,7 @@ describe("Airdrop", function () {
     const USDT = await ethers.getContractFactory("USDT");
     const usdt = await USDT.deploy();
 
-    const AIRDROP = await ethers.getContractFactory("Airdrop");
+    const AIRDROP = await ethers.getContractFactory("Reward");
     const airdrop = await AIRDROP.deploy(usdt.address);
 
     await usdt.approve(airdrop.address, ethers.utils.parseEther("2100"));
@@ -51,11 +51,8 @@ describe("Airdrop", function () {
     it("check the config and balance of airdrop and usdt", async function () {
       const { usdt, airdrop, tree, owner } = await loadFixture(deployer);
 
-      const ownerBal = await usdt.balanceOf(owner.address);
       const airdropBal = await usdt.balanceOf(airdrop.address);
       const epoch = await airdrop.epoch();
-
-      await expect(airdrop.setMerkleRoot(tree.getHexRoot())).to.be.reverted;
 
       expect(epoch).equal(1);
       expect(airdropBal.toString()).equal(ethers.utils.parseEther("2100"));
@@ -108,6 +105,9 @@ describe("Airdrop", function () {
       await airdrop.claim(addr1, ethers.utils.parseEther("1"), proof, 100);
       const balUser1 = await usdt.balanceOf(addr1);
 
+      await expect(airdrop.setMerkleRoot(tree.getHexRoot())).to.be.reverted;
+      await expect(airdrop.connect(addrs[1]).setMerkleRoot(tree.getHexRoot()))
+        .to.be.reverted;
       expect(balUser1.toString()).equal(ethers.utils.parseEther("1"));
     });
 
@@ -154,6 +154,8 @@ describe("Airdrop", function () {
       ).to.be.reverted;
 
       await airdrop.reclaim();
+
+      await expect(airdrop.connect(addrs[1]).reclaim()).to.be.reverted;
 
       const balOwnerAfter = await usdt.balanceOf(owner.address);
 
@@ -203,6 +205,63 @@ describe("Airdrop", function () {
 
       expect(balUser1.toString()).equal(ethers.utils.parseEther("0"));
       expect(balBBRPUser1.toString()).equal(ethers.utils.parseEther("1"));
+    });
+
+    it("claim reward 100% pBRP then transfer", async function () {
+      const { airdrop, tree, usdt, owner, pBRP } = await loadFixture(deployer);
+      const addrs = await ethers.getSigners();
+      const addr1 = addrs[1].address;
+
+      const proof = tree.getHexProof(
+        keccak256(
+          ethers.utils.solidityPack(
+            ["address", "uint256"],
+            [addr1, ethers.utils.parseEther("1")]
+          )
+        )
+      );
+
+      await airdrop.claim(addr1, ethers.utils.parseEther("1"), proof, 0);
+      const balUser1 = await usdt.balanceOf(addr1);
+
+      const balBBRPUser1 = await pBRP.balanceOf(addr1);
+
+      expect(balUser1.toString()).equal(ethers.utils.parseEther("0"));
+      expect(balBBRPUser1.toString()).equal(ethers.utils.parseEther("1"));
+
+      await expect(
+        pBRP
+          .connect(addrs[1])
+          .transfer(airdrop.address, ethers.utils.parseEther("0.1"))
+      ).to.be.reverted;
+    });
+    it("claim reward 100% pBRP then mint", async function () {
+      const { airdrop, tree, usdt, owner, pBRP } = await loadFixture(deployer);
+      const addrs = await ethers.getSigners();
+      const addr1 = addrs[1].address;
+
+      const proof = tree.getHexProof(
+        keccak256(
+          ethers.utils.solidityPack(
+            ["address", "uint256"],
+            [addr1, ethers.utils.parseEther("1")]
+          )
+        )
+      );
+
+      await airdrop.claim(addr1, ethers.utils.parseEther("1"), proof, 0);
+      const balUser1 = await usdt.balanceOf(addr1);
+
+      const balBBRPUser1 = await pBRP.balanceOf(addr1);
+
+      expect(balUser1.toString()).equal(ethers.utils.parseEther("0"));
+      expect(balBBRPUser1.toString()).equal(ethers.utils.parseEther("1"));
+
+      await expect(
+        pBRP
+          .connect(addrs[1])
+          .mint(airdrop.address, ethers.utils.parseEther("1"))
+      ).to.be.reverted;
     });
   });
 });
