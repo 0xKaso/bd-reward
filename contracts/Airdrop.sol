@@ -7,8 +7,6 @@ import "./contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "./contracts/token/ERC20/utils/SafeERC20.sol";
 import "./PBRP.sol";
 
-import "hardhat/console.sol";
-
 contract Airdrop is Ownable {
     using SafeERC20 for IERC20Metadata;
 
