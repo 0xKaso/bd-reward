@@ -90,6 +90,7 @@ contract Airdrop is Ownable {
     }
 
     function updateToken(address token_) external onlyOwner {
+        require(IERC20Metadata(token).decimals() <= 18, "error decimals");
         reclaim();
         emit RewardTokenChanged(msg.sender, token, token_);
         token = token_;

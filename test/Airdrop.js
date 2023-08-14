@@ -7,7 +7,7 @@ const { ethers } = require("hardhat");
 const keccak256 = require("keccak256");
 const { MerkleTree } = require("merkletreejs");
 
-describe("Lock", function () {
+describe("Airdrop", function () {
   async function mockData() {
     let accounts = await ethers.getSigners();
 
