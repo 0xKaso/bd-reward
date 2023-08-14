@@ -1,19 +1,21 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./contracts/access/Ownable.sol";
+import "./contracts/utils/cryptography/MerkleProof.sol";
+import "./contracts/token/ERC20/IERC20.sol";
+import "./contracts/token/ERC20/utils/SafeERC20.sol";
+import "./PBRP.sol";
 
 import "hardhat/console.sol";
 
-interface IJXT {
-    function whiteList(address addr) external view returns(bool);
-}
-
 contract Airdrop is Ownable {
+    using SafeERC20 for IERC20;
+
     bytes32 public merkleRoot;
     address public token;
+    PBRP public pBRP;
+
     mapping(bytes32 => uint) public claimed;
 
     uint public epoch;
@@ -22,10 +24,12 @@ contract Airdrop is Ownable {
 
     constructor(address _token) {
         token = _token;
+        pBRP = new PBRP();
+        require(IERC20(token).decimals() <= 18, "error decimals");
     }
 
     function setMerkleRoot(bytes32 _merkleRoot) public onlyOwner {
-        require(_merkleRoot != merkleRoot,"the same root node");
+        require(_merkleRoot != merkleRoot, "the same root node");
         epoch++;
         merkleRoot = _merkleRoot;
     }
@@ -54,10 +58,10 @@ contract Airdrop is Ownable {
     function claim(
         address account,
         uint256 amount,
-        bytes32[] memory proof
+        bytes32[] memory proof,
+        uint ratio
     ) public {
         bytes32 node = keccak256(abi.encodePacked(account, amount));
-        require(IJXT(token).whiteList(account) == false, "white list can not claim");
         require(claimed[node] != epoch, "Airdrop: Already claimed.");
         require(
             MerkleProof.verify(proof, merkleRoot, node),
@@ -65,10 +69,16 @@ contract Airdrop is Ownable {
         );
 
         claimed[node] = epoch;
-        require(
-            IERC20(token).transfer(account, amount),
-            "Airdrop: Transfer failed."
-        );
+
+        // USDT
+        IERC20(token).safeTransfer(account, (amount * ratio) / 100);
+
+        // bBRP
+        uint bBRPAmount = (amount *
+            (100 - ratio) *
+            10 ** (18 - IERC20(token).decimals())) / 100;
+        pBRP.mint(account, bBRPAmount);
+
         emit Claimed(account, amount);
     }
 }
