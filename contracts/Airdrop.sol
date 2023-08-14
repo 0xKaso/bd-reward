@@ -26,6 +26,12 @@ contract Airdrop is Ownable {
         address token
     );
 
+    event RewardTokenChanged(
+        address indexed owner,
+        address oldToken,
+        address newToken
+    );
+
     constructor(address _token) {
         token = _token;
         pBRP = new PBRP();
@@ -40,10 +46,7 @@ contract Airdrop is Ownable {
 
     function reclaim() public onlyOwner {
         uint256 balance = IERC20Metadata(token).balanceOf(address(this));
-        require(
-            IERC20Metadata(token).transfer(msg.sender, balance),
-            "Airdrop: Transfer failed."
-        );
+        IERC20Metadata(token).safeTransfer(msg.sender, balance);
     }
 
     function verify(
@@ -86,5 +89,11 @@ contract Airdrop is Ownable {
 
         emit Claimed(account, tokenAmount, token);
         emit Claimed(account, bBRPAmount, address(pBRP));
+    }
+
+    function updateToken(address token_) external onlyOwner {
+        reclaim();
+        emit RewardTokenChanged(msg.sender, token, token_);
+        token = token_;
     }
 }
