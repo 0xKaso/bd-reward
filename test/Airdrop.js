@@ -31,31 +31,31 @@ describe("Lock", function () {
     const { tree } = await mockData();
     const [owner, otherAccount] = await ethers.getSigners();
 
-    const MTK = await ethers.getContractFactory("MyToken");
-    const mtk = await MTK.deploy();
+    const USDT = await ethers.getContractFactory("USDT");
+    const usdt = await USDT.deploy();
 
     const AIRDROP = await ethers.getContractFactory("Airdrop");
-    const airdrop = await AIRDROP.deploy(mtk.address);
+    const airdrop = await AIRDROP.deploy(usdt.address);
 
-    await mtk.approve(airdrop.address, ethers.utils.parseEther("2100"));
+    await usdt.approve(airdrop.address, ethers.utils.parseEther("2100"));
     await airdrop.setMerkleRoot(tree.getHexRoot());
+    await usdt.transfer(airdrop.address, ethers.utils.parseEther("2100"));
 
-    return { mtk, airdrop, owner, otherAccount, tree };
+    return { usdt, airdrop, owner, otherAccount, tree };
   }
 
   describe("Deployment", function () {
-    it("check the config and balance of airdrop and mtk", async function () {
-      const { mtk, airdrop, tree, owner } = await loadFixture(deployer);
+    it("check the config and balance of airdrop and usdt", async function () {
+      const { usdt, airdrop, tree, owner } = await loadFixture(deployer);
 
-      const ownerBal = await mtk.balanceOf(owner.address);
-      const airdropBal = await mtk.balanceOf(airdrop.address);
+      const ownerBal = await usdt.balanceOf(owner.address);
+      const airdropBal = await usdt.balanceOf(airdrop.address);
       const epoch = await airdrop.epoch();
 
       await expect(airdrop.setMerkleRoot(tree.getHexRoot())).to.be.reverted;
 
       expect(epoch).equal(1);
-      expect(ownerBal.toString()).equal(ethers.utils.parseEther("630"));
-      expect(airdropBal.toString()).equal(ethers.utils.parseEther("1470"));
+      expect(airdropBal.toString()).equal(ethers.utils.parseEther("2100"));
     });
 
     it("verify user airdrop reward", async function () {
@@ -89,7 +89,7 @@ describe("Lock", function () {
     });
 
     it("claim reward", async function () {
-      const { airdrop, tree, mtk, owner } = await loadFixture(deployer);
+      const { airdrop, tree, usdt, owner } = await loadFixture(deployer);
       const addrs = await ethers.getSigners();
       const addr1 = addrs[1].address;
 
@@ -111,19 +111,25 @@ describe("Lock", function () {
         )
       );
 
-      await airdrop.claim(addr1, ethers.utils.parseEther("1"), proof);
-      const balUser1 = await mtk.balanceOf(addr1);
+      await airdrop.claim(addr1, ethers.utils.parseEther("1"), proof, 100);
+      const balUser1 = await usdt.balanceOf(addr1);
 
       expect(balUser1.toString()).equal(ethers.utils.parseEther("1"));
-      await expect(airdrop.claim(addr1, ethers.utils.parseEther("1"), proof)).to
-        .be.reverted;
       await expect(
-        airdrop.claim(addrs[2].address, ethers.utils.parseEther("1"), proof2)
+        airdrop.claim(addr1, ethers.utils.parseEther("1"), proof, 100)
+      ).to.be.reverted;
+      await expect(
+        airdrop.claim(
+          addrs[2].address,
+          ethers.utils.parseEther("1"),
+          proof2,
+          100
+        )
       ).to.be.reverted;
 
       await airdrop.reclaim();
 
-      const balOwnerAfter = await mtk.balanceOf(owner.address);
+      const balOwnerAfter = await usdt.balanceOf(owner.address);
 
       expect(balOwnerAfter).equal(ethers.utils.parseEther("2099"));
     });
