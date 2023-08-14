@@ -52,12 +52,9 @@ contract Reward is Ownable {
         uint256 amount,
         bytes32[] memory proof
     ) public view returns (bool) {
-        return
-            MerkleProof.verify(
-                proof,
-                merkleRoot,
-                keccak256(abi.encodePacked(account, amount))
-            );
+        bytes32 node = keccak256(abi.encodePacked(account, amount));
+        if (claimed[node] == epoch) return false;
+        return MerkleProof.verify(proof, merkleRoot, node);
     }
 
     function claim(
@@ -68,10 +65,7 @@ contract Reward is Ownable {
     ) public {
         bytes32 node = keccak256(abi.encodePacked(account, amount));
         require(claimed[node] != epoch, "Already claimed.");
-        require(
-            MerkleProof.verify(proof, merkleRoot, node),
-            "Invalid proof."
-        );
+        require(MerkleProof.verify(proof, merkleRoot, node), "Invalid proof.");
 
         claimed[node] = epoch;
 
