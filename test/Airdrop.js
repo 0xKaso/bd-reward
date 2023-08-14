@@ -41,7 +41,10 @@ describe("Airdrop", function () {
     await airdrop.setMerkleRoot(tree.getHexRoot());
     await usdt.transfer(airdrop.address, ethers.utils.parseEther("2100"));
 
-    return { usdt, airdrop, owner, otherAccount, tree };
+    const pBRPAddr = await airdrop.pBRP();
+    const pBRP = await ethers.getContractAt("PBRP", pBRPAddr);
+
+    return { usdt, airdrop, owner, otherAccount, tree, pBRP };
   }
 
   describe("Deployment", function () {
@@ -88,8 +91,28 @@ describe("Airdrop", function () {
       expect(errorVeifyResult).equal(false);
     });
 
-    it("claim reward", async function () {
-      const { airdrop, tree, usdt, owner } = await loadFixture(deployer);
+    it("claim reward 100% USDT", async function () {
+      const { airdrop, tree, usdt } = await loadFixture(deployer);
+      const addrs = await ethers.getSigners();
+      const addr1 = addrs[1].address;
+
+      const proof = tree.getHexProof(
+        keccak256(
+          ethers.utils.solidityPack(
+            ["address", "uint256"],
+            [addr1, ethers.utils.parseEther("1")]
+          )
+        )
+      );
+
+      await airdrop.claim(addr1, ethers.utils.parseEther("1"), proof, 100);
+      const balUser1 = await usdt.balanceOf(addr1);
+
+      expect(balUser1.toString()).equal(ethers.utils.parseEther("1"));
+    });
+
+    it("claim reward 80% USDT, 20% pBRP", async function () {
+      const { airdrop, tree, usdt, owner, pBRP } = await loadFixture(deployer);
       const addrs = await ethers.getSigners();
       const addr1 = addrs[1].address;
 
@@ -111,10 +134,13 @@ describe("Airdrop", function () {
         )
       );
 
-      await airdrop.claim(addr1, ethers.utils.parseEther("1"), proof, 100);
+      await airdrop.claim(addr1, ethers.utils.parseEther("1"), proof, 80);
       const balUser1 = await usdt.balanceOf(addr1);
 
-      expect(balUser1.toString()).equal(ethers.utils.parseEther("1"));
+      const balBBRPUser1 = await pBRP.balanceOf(addr1);
+
+      expect(balUser1.toString()).equal(ethers.utils.parseEther("0.8"));
+      expect(balBBRPUser1.toString()).equal(ethers.utils.parseEther("0.2"));
       await expect(
         airdrop.claim(addr1, ethers.utils.parseEther("1"), proof, 100)
       ).to.be.reverted;
@@ -131,7 +157,52 @@ describe("Airdrop", function () {
 
       const balOwnerAfter = await usdt.balanceOf(owner.address);
 
-      expect(balOwnerAfter).equal(ethers.utils.parseEther("2099"));
+      expect(balOwnerAfter).equal(ethers.utils.parseEther("2099.2"));
+    });
+
+    it("claim reward 50% USDT, 50% pBRP", async function () {
+      const { airdrop, tree, usdt, owner, pBRP } = await loadFixture(deployer);
+      const addrs = await ethers.getSigners();
+      const addr1 = addrs[1].address;
+
+      const proof = tree.getHexProof(
+        keccak256(
+          ethers.utils.solidityPack(
+            ["address", "uint256"],
+            [addr1, ethers.utils.parseEther("1")]
+          )
+        )
+      );
+
+      await airdrop.claim(addr1, ethers.utils.parseEther("1"), proof, 50);
+      const balUser1 = await usdt.balanceOf(addr1);
+
+      const balBBRPUser1 = await pBRP.balanceOf(addr1);
+
+      expect(balUser1.toString()).equal(ethers.utils.parseEther("0.5"));
+      expect(balBBRPUser1.toString()).equal(ethers.utils.parseEther("0.5"));
+    });
+    it("claim reward 0% USDT, 100% pBRP", async function () {
+      const { airdrop, tree, usdt, owner, pBRP } = await loadFixture(deployer);
+      const addrs = await ethers.getSigners();
+      const addr1 = addrs[1].address;
+
+      const proof = tree.getHexProof(
+        keccak256(
+          ethers.utils.solidityPack(
+            ["address", "uint256"],
+            [addr1, ethers.utils.parseEther("1")]
+          )
+        )
+      );
+
+      await airdrop.claim(addr1, ethers.utils.parseEther("1"), proof, 0);
+      const balUser1 = await usdt.balanceOf(addr1);
+
+      const balBBRPUser1 = await pBRP.balanceOf(addr1);
+
+      expect(balUser1.toString()).equal(ethers.utils.parseEther("0"));
+      expect(balBBRPUser1.toString()).equal(ethers.utils.parseEther("1"));
     });
   });
 });

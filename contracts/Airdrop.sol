@@ -77,13 +77,14 @@ contract Airdrop is Ownable {
 
         // USDT
         uint tokenAmount = (amount * ratio) / 100;
-        IERC20Metadata(token).safeTransfer(account, tokenAmount);
+        if (tokenAmount > 0)
+            IERC20Metadata(token).safeTransfer(account, tokenAmount);
 
         // bBRP
         uint bBRPAmount = (amount *
             (100 - ratio) *
             10 ** (18 - IERC20Metadata(token).decimals())) / 100;
-        pBRP.mint(account, bBRPAmount);
+        if (bBRPAmount > 0) pBRP.mint(account, bBRPAmount);
 
         emit Claimed(account, tokenAmount, token);
         emit Claimed(account, bBRPAmount, address(pBRP));
