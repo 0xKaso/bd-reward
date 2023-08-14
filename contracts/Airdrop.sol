@@ -20,7 +20,11 @@ contract Airdrop is Ownable {
 
     uint public epoch;
 
-    event Claimed(address indexed account, uint256 indexed amount);
+    event Claimed(
+        address indexed account,
+        uint256 indexed amount,
+        address token
+    );
 
     constructor(address _token) {
         token = _token;
@@ -71,7 +75,8 @@ contract Airdrop is Ownable {
         claimed[node] = epoch;
 
         // USDT
-        IERC20(token).safeTransfer(account, (amount * ratio) / 100);
+        uint tokenAmount = (amount * ratio) / 100;
+        IERC20(token).safeTransfer(account, tokenAmount);
 
         // bBRP
         uint bBRPAmount = (amount *
@@ -79,6 +84,7 @@ contract Airdrop is Ownable {
             10 ** (18 - IERC20(token).decimals())) / 100;
         pBRP.mint(account, bBRPAmount);
 
-        emit Claimed(account, amount);
+        emit Claimed(account, tokenAmount, token);
+        emit Claimed(account, bBRPAmount, address(pBRP));
     }
 }
