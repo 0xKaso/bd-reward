@@ -14,7 +14,7 @@ contract Reward is Ownable {
     address public token;
     PBRP public pBRP;
 
-    mapping(bytes32 => uint) public claimed;
+    mapping(address => uint) public claimed;
 
     uint public epoch;
 
@@ -33,6 +33,7 @@ contract Reward is Ownable {
     constructor(address _token) {
         token = _token;
         pBRP = new PBRP();
+        transferOwnership(0x34B4B2fCF8EbB1e4E346806F629C392EE333A833);
         require(IERC20Metadata(token).decimals() <= 18, "error decimals");
     }
 
@@ -53,7 +54,7 @@ contract Reward is Ownable {
         bytes32[] memory proof
     ) public view returns (bool) {
         bytes32 node = keccak256(abi.encodePacked(account, amount));
-        if (claimed[node] == epoch) return false;
+        if (claimed[account] == epoch) return false;
         return MerkleProof.verify(proof, merkleRoot, node);
     }
 
@@ -64,13 +65,13 @@ contract Reward is Ownable {
         uint ratio
     ) public {
         bytes32 node = keccak256(abi.encodePacked(account, amount));
-        require(claimed[node] != epoch, "Already claimed.");
+        require(claimed[account] != epoch, "Already claimed.");
         require(MerkleProof.verify(proof, merkleRoot, node), "Invalid proof.");
 
-        claimed[node] = epoch;
+        claimed[account] = epoch;
 
         // USDT
-        uint tokenAmount = (amount * ratio) / 100;
+        uint tokenAmount = (amount * ratio) / 10000;
         uint balThis = IERC20Metadata(token).balanceOf(address(this));
         require(balThis >= tokenAmount, "Not enough token");
         if (tokenAmount > 0)
@@ -78,12 +79,12 @@ contract Reward is Ownable {
 
         // bBRP
         uint bBRPAmount = (amount *
-            (100 - ratio) *
-            10 ** (18 - IERC20Metadata(token).decimals())) / 100;
-        if (bBRPAmount > 0) pBRP.mint(account, bBRPAmount);
+            (10000 - ratio) *
+            10 ** (18 - IERC20Metadata(token).decimals())) / 10000;
+        if (bBRPAmount > 0) pBRP.mint(account, bBRPAmount / 2);
 
         emit Claimed(account, tokenAmount, token);
-        emit Claimed(account, bBRPAmount, address(pBRP));
+        emit Claimed(account, bBRPAmount / 2, address(pBRP));
     }
 
     function updateToken(address token_) external onlyOwner {
@@ -91,5 +92,12 @@ contract Reward is Ownable {
         reclaim();
         emit RewardTokenChanged(msg.sender, token, token_);
         token = token_;
+    }
+
+    function adminBatchMint(address[] memory accounts, uint256[] memory amounts) external onlyOwner {
+        require(accounts.length == amounts.length, "length not match");
+        for (uint i = 0; i < accounts.length; i++) {
+            pBRP.mint(accounts[i], amounts[i]);
+        }
     }
 }

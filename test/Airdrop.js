@@ -102,7 +102,7 @@ describe("Reward", function () {
         )
       );
 
-      await airdrop.claim(addr1, ethers.utils.parseEther("1"), proof, 100);
+      await airdrop.claim(addr1, ethers.utils.parseEther("1"), proof, 10000);
       const balUser1 = await usdt.balanceOf(addr1);
 
       await expect(airdrop.setMerkleRoot(tree.getHexRoot())).to.be.reverted;
@@ -134,7 +134,7 @@ describe("Reward", function () {
         )
       );
 
-      await airdrop.claim(addr1, ethers.utils.parseEther("1"), proof, 80);
+      await airdrop.claim(addr1, ethers.utils.parseEther("1"), proof, 8000);
       const balUser1 = await usdt.balanceOf(addr1);
 
       const balBBRPUser1 = await pBRP.balanceOf(addr1);
@@ -176,7 +176,7 @@ describe("Reward", function () {
         )
       );
 
-      await airdrop.claim(addr1, ethers.utils.parseEther("1"), proof, 50);
+      await airdrop.claim(addr1, ethers.utils.parseEther("1"), proof, 5000);
       const balUser1 = await usdt.balanceOf(addr1);
 
       const balBBRPUser1 = await pBRP.balanceOf(addr1);

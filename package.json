@@ -1,7 +1,8 @@
 {
   "name": "hardhat-project",
   "scripts": {
-    "cov": "hardhat coverage --solcoverjs ./.solcover.js"
+    "cov": "hardhat coverage --solcoverjs ./.solcover.js",
+    "deploy": "hardhat run scripts/deploy.js --network mumbai"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^2.0.2",
