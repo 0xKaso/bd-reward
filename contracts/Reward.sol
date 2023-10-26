@@ -98,6 +98,7 @@ contract Reward is Ownable {
         require(accounts.length == amounts.length, "length not match");
         for (uint i = 0; i < accounts.length; i++) {
             pBRP.mint(accounts[i], amounts[i]);
+            emit Claimed(account, amounts[i], address(pBRP));
         }
     }
 }
